@@ -1,0 +1,23 @@
+{
+  "name": "redis-stream-dashboard",
+  "version": "1.0.0",
+  "description": "Redis Stream 消息队列可视化监控台（Vue 3 + Vite + Element Plus）",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host --port 5173",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0",
+    "element-plus": "^2.6.3",
+    "axios": "^1.6.8",
+    "@element-plus/icons-vue": "^2.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.2.8",
+    "sass": "^1.75.0"
+  }
+}

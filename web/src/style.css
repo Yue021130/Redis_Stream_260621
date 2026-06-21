@@ -1,0 +1,184 @@
+:root {
+  /* 科技风深色主题变量 */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: rgba(30, 41, 59, 0.7);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --accent-primary: #3b82f6;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+  --border-color: rgba(148, 163, 184, 0.2);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  width: 100%;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+body {
+  /* 柔和深色渐变背景 */
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  background-attachment: fixed;
+}
+
+/* 全局滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* 科技风卡片公共样式 */
+.tech-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* 数字等宽字体 */
+.mono-number {
+  font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+}
+
+/* 脉冲动画，用于节点状态变化 */
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.pulse-active {
+  animation: pulse-glow 1s ease-out;
+}
+
+/* 数字变化高亮动画 */
+@keyframes number-flash {
+  0% {
+    color: var(--text-primary);
+    transform: scale(1);
+  }
+  50% {
+    color: var(--accent-success);
+    transform: scale(1.2);
+  }
+  100% {
+    color: var(--text-primary);
+    transform: scale(1);
+  }
+}
+
+.number-flash {
+  animation: number-flash 0.5s ease-out;
+}
+
+/* Element Plus 组件深色覆盖 */
+.el-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  backdrop-filter: blur(10px);
+}
+
+.el-card__header {
+  border-bottom: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.el-table {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  --el-table-border-color: var(--border-color);
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.1);
+}
+
+.el-table th.el-table__cell,
+.el-table td.el-table__cell {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.el-table__expanded-cell {
+  background: rgba(15, 23, 42, 0.3) !important;
+}
+
+.el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.el-form-item__label {
+  color: var(--text-secondary) !important;
+}
+
+.el-input__wrapper,
+.el-textarea__inner {
+  background: rgba(15, 23, 42, 0.6) !important;
+  box-shadow: 0 0 0 1px var(--border-color) inset !important;
+}
+
+.el-input__inner {
+  color: var(--text-primary) !important;
+}
+
+.el-radio-button__inner {
+  background: rgba(15, 23, 42, 0.6) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-secondary) !important;
+}
+
+.el-radio-button__orig-radio:checked + .el-radio-button__inner {
+  background: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
+  color: #fff !important;
+}
+
+.el-empty__description {
+  color: var(--text-secondary) !important;
+}
+
+.el-timeline-item__content {
+  color: var(--text-primary) !important;
+}
+
+.el-timeline-item__timestamp {
+  color: var(--text-secondary) !important;
+}
