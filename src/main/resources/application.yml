@@ -1,0 +1,59 @@
+# ===================================
+# Spring Boot 应用主配置
+# 目标：连接本机 Redis，并配置自定义 Stream 行为参数
+# ===================================
+spring:
+  application:
+    name: redis-stream-demo
+
+  redis:
+    host: localhost        # Redis 服务器地址
+    port: 6379             # Redis 端口
+    database: 0            # 使用第 0 号数据库
+    timeout: 2000ms        # 连接超时
+    lettuce:
+      pool:
+        max-active: 8      # 连接池最大连接数
+        max-idle: 8        # 连接池最大空闲连接
+        min-idle: 0        # 连接池最小空闲连接
+
+# 自定义业务配置
+app:
+  stream:
+    # Stream 主 key：所有订单消息都写到这里
+    key: "order:stream"
+
+    # 消费者组（多个组订阅同一 stream，实现不同业务独立消费）
+    groups:
+      inventory: "order:group:inventory"   # 库存扣减组
+      sms: "order:group:sms"               # 短信通知组
+
+    # 消费者前缀，后面会拼上 UUID 或序号，方便多实例区分
+    consumer-prefix: "consumer"
+
+    # Stream 最大长度，生产者每次发消息后执行 XTRIM，防止无限增长
+    max-len: 10000
+
+    # 业务处理最大重试次数，超过后进死信队列（DLQ）
+    max-retries: 3
+
+    # 幂等键过期时间（秒），避免长期占用 Redis 内存
+    idempotent-ttl-seconds: 86400
+
+    # pending 扫描间隔（毫秒）
+    pending-interval-ms: 10000
+
+    # 消息被某个消费者持有超过该时间未 ACK，则被其他消费者 claim（毫秒）
+    claim-idle-ms: 30000
+
+    # 是否模拟随机业务失败（用于观察重试、pending、DLQ）
+    simulate-failure: false
+
+    # 模拟失败概率（0.0 ~ 1.0），仅 simulate-failure=true 时生效
+    failure-rate: 0.3
+
+# 日志级别：把 Stream 相关包提到 DEBUG，方便学习观察
+logging:
+  level:
+    com.example.redisstream: DEBUG
+    org.springframework.data.redis: INFO
