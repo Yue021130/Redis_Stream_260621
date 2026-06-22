@@ -1,5 +1,5 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { getStats, getPending, getDlq, getLogs, getRecentMessages } from '../api/order.js'
+import { getStats, getPending, getDlq, getLogs, getRecentMessages, getConfig, updateConfig } from '../api/order.js'
 
 /**
  * 轮询间隔（毫秒）。
@@ -19,6 +19,7 @@ export function useStreamDashboard() {
   const dlqList = ref([])
   const eventLogs = ref([])
   const recentMessages = ref([])
+  const config = ref({ simulateFailure: false, failureRate: 0.3, maxRetries: 3 })
 
   // UI 状态
   const loading = ref(false)
@@ -94,10 +95,37 @@ export function useStreamDashboard() {
   }
 
   /**
+   * 获取并缓存系统配置。
+   */
+  async function fetchConfig() {
+    try {
+      const data = await getConfig()
+      if (data) {
+        config.value = data
+      }
+    } catch (err) {
+      console.error('获取配置失败:', err)
+    }
+  }
+
+  /**
+   * 更新并刷新配置。
+   */
+  async function updateConfigParams(params) {
+    try {
+      await updateConfig(params)
+      await fetchConfig()
+    } catch (err) {
+      console.error('更新配置失败:', err)
+    }
+  }
+
+  /**
    * 启动轮询。
    */
   function startPolling() {
     fetchAll()
+    fetchConfig()
     timer = setInterval(fetchAll, POLL_INTERVAL)
   }
 
@@ -135,6 +163,7 @@ export function useStreamDashboard() {
     dlqList,
     eventLogs,
     recentMessages,
+    config,
     loading,
     error,
     isConnected,
@@ -144,6 +173,8 @@ export function useStreamDashboard() {
     switchGroup,
     refresh,
     fetchAll,
-    addLog
+    addLog,
+    fetchConfig,
+    updateConfigParams
   }
 }

@@ -29,3 +29,9 @@ export const getLogs = () => request.get('/api/order/logs')
 
 // 获取最新生产的消息
 export const getRecentMessages = () => request.get('/api/order/recent')
+
+// 获取系统配置
+export const getConfig = () => request.get('/api/order/config')
+
+// 更新系统配置
+export const updateConfig = (config) => request.post('/api/order/config', config)

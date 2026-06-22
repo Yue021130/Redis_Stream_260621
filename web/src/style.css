@@ -182,3 +182,76 @@ body {
 .el-timeline-item__timestamp {
   color: var(--text-secondary) !important;
 }
+
+/* Element Plus 标签页与按钮深度定制 */
+.el-tabs__item {
+  color: var(--text-secondary) !important;
+  font-family: 'PingFang SC', sans-serif;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+  padding: 0 20px !important;
+}
+
+.el-tabs__item:hover {
+  color: var(--text-primary) !important;
+}
+
+.el-tabs__item.is-active {
+  color: var(--accent-primary) !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+}
+
+.el-tabs__active-bar {
+  background-color: var(--accent-primary) !important;
+  height: 3px !important;
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--accent-primary);
+}
+
+.el-tabs__nav-wrap::after {
+  background-color: var(--border-color) !important;
+}
+
+.el-button {
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--accent-primary) !important;
+  --el-button-border-color: var(--accent-primary) !important;
+  --el-button-hover-bg-color: #2563eb !important;
+  --el-button-hover-border-color: #2563eb !important;
+}
+
+.el-button--success {
+  --el-button-bg-color: var(--accent-success) !important;
+  --el-button-border-color: var(--accent-success) !important;
+  --el-button-hover-bg-color: #059669 !important;
+  --el-button-hover-border-color: #059669 !important;
+}
+
+.el-button--warning {
+  --el-button-bg-color: var(--accent-warning) !important;
+  --el-button-border-color: var(--accent-warning) !important;
+  --el-button-hover-bg-color: #d97706 !important;
+  --el-button-hover-border-color: #d97706 !important;
+}
+
+.el-button--danger {
+  --el-button-bg-color: var(--accent-danger) !important;
+  --el-button-border-color: var(--accent-danger) !important;
+  --el-button-hover-bg-color: #dc2626 !important;
+  --el-button-hover-border-color: #dc2626 !important;
+}
+
+/* 覆盖 Element 输入组件在 Chrome 自动填充时的背景 */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #0f172a inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+}
+
