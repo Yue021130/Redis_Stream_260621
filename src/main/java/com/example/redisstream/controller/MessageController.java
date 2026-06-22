@@ -176,4 +176,35 @@ public class MessageController {
         }
         return ApiResponse.success(result);
     }
+
+    /**
+     * 获取当前系统配置参数。
+     */
+    @GetMapping("/config")
+    public ApiResponse<Map<String, Object>> getConfig() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("simulateFailure", streamProperties.getSimulateFailure());
+        map.put("failureRate", streamProperties.getFailureRate());
+        map.put("maxRetries", streamProperties.getMaxRetries());
+        map.put("pendingIntervalMs", streamProperties.getPendingIntervalMs());
+        map.put("claimIdleMs", streamProperties.getClaimIdleMs());
+        return ApiResponse.success(map);
+    }
+
+    /**
+     * 更新系统配置参数。
+     */
+    @PostMapping("/config")
+    public ApiResponse<String> updateConfig(@RequestBody Map<String, Object> config) {
+        if (config.containsKey("simulateFailure")) {
+            streamProperties.setSimulateFailure((Boolean) config.get("simulateFailure"));
+        }
+        if (config.containsKey("failureRate")) {
+            streamProperties.setFailureRate(Double.valueOf(config.get("failureRate").toString()));
+        }
+        if (config.containsKey("maxRetries")) {
+            streamProperties.setMaxRetries(Integer.valueOf(config.get("maxRetries").toString()));
+        }
+        return ApiResponse.success("配置更新成功");
+    }
 }
