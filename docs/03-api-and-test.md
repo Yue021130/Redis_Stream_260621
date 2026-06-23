@@ -136,6 +136,109 @@ curl http://localhost:8080/api/order/stats
 }
 ```
 
+### 1.7 获取实时事件日志
+
+```bash
+curl http://localhost:8080/api/order/logs
+```
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "time": "2026-06-23 08:53:04.123",
+      "module": "INVENTORY",
+      "type": "SUCCESS",
+      "detail": "订单 O-BULK-001 扣减库存成功，并发送 ACK"
+    },
+    {
+      "time": "2026-06-23 08:53:05.456",
+      "module": "SMS",
+      "type": "FAILURE",
+      "detail": "模拟短信发送失败异常，订单 O-BULK-002 进入 Pending 队列"
+    }
+  ]
+}
+```
+
+### 1.8 获取最近生产的 Stream 消息 (XREVRANGE)
+
+```bash
+curl http://localhost:8080/api/order/recent
+```
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": "1719999999999-1",
+      "payload": "{\"orderId\":\"O-BULK-002\",\"userId\":\"U999\",\"sku\":\"SKU-999\",\"quantity\":1,\"amount\":9.99}"
+    },
+    {
+      "id": "1719999999999-0",
+      "payload": "{\"orderId\":\"O-BULK-001\",\"userId\":\"U999\",\"sku\":\"SKU-999\",\"quantity\":1,\"amount\":9.99}"
+    }
+  ]
+}
+```
+
+### 1.9 获取当前系统配置参数
+
+```bash
+curl http://localhost:8080/api/order/config
+```
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "simulateFailure": false,
+    "failureRate": 0.3,
+    "maxRetries": 3,
+    "pendingIntervalMs": 5000,
+    "claimIdleMs": 10000
+  }
+}
+```
+
+### 1.10 更新系统配置参数
+
+```bash
+POST /api/order/config
+Content-Type: application/json
+```
+
+请求体：
+
+```json
+{
+  "simulateFailure": true,
+  "failureRate": 0.5,
+  "maxRetries": 2
+}
+```
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "配置更新成功",
+  "data": null
+}
+```
+
 ## 2. 单元测试与集成测试
 
 ### 2.1 运行所有测试
