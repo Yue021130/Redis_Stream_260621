@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 演示 Redis List 经典使用场景：简单消息队列、最新列表(时间线)
+ * 演示 Redis List 经典使用场景：简单消息队列、最新列表(时间线)、可靠队列、栈(LIFO)
  */
 @Slf4j
 @Service
@@ -63,5 +63,48 @@ public class RedisListUseCasesService {
         List<String> records = stringRedisTemplate.opsForList().range(key, start, end);
         log.info("获取最新记录列表: timeline={}, start={}, end={}, size={}", timelineKey, start, end, (records != null ? records.size() : 0));
         return records;
+    }
+
+    /**
+     * 3. 可靠队列场景：安全消费 (RPOPLPUSH / LMOVE)
+     * 解决普通 RPOP 弹出消息后，如果消费者此时立刻宕机会导致消息丢失的问题。
+     * 将消息从主队列弹出的同时，原子性地压入一个"处理中"队列。处理完成后再从"处理中"队列删除。
+     */
+    public String receiveMessageReliably(String mainQueue, String processingQueue) {
+        String sourceKey = "queue:" + mainQueue;
+        String destKey = "queue:processing:" + processingQueue;
+        
+        // rightPopAndLeftPush 原子操作：从 source 右侧弹出，并原子性推入 dest 左侧
+        String message = stringRedisTemplate.opsForList().rightPopAndLeftPush(sourceKey, destKey);
+        log.info("可靠队列 - 取出消息并放入处理队列: source={}, dest={}, message={}", mainQueue, processingQueue, message);
+        return message;
+    }
+
+    /**
+     * 3. 可靠队列场景：确认消费完成 (ACK)
+     * 从"处理中"队列将该条消息彻底删除，表示业务代码已经执行成功。
+     */
+    public void ackReliableMessage(String processingQueue, String message) {
+        String destKey = "queue:processing:" + processingQueue;
+        // count > 0 : 从表头开始向表尾搜索，移除与 value 相等的元素，数量为 count。
+        stringRedisTemplate.opsForList().remove(destKey, 1, message);
+        log.info("可靠队列 - 消息处理完成并已删除确认: queue={}, message={}", processingQueue, message);
+    }
+
+    /**
+     * 4. 栈（LIFO 后进先出）场景
+     * 同侧进，同侧出 (例如均在左侧：LPUSH + LPOP)。用于实现用户的浏览历史回退、最近搜索记录展示等。
+     */
+    public void pushToStack(String stackName, String item) {
+        String key = "stack:" + stackName;
+        stringRedisTemplate.opsForList().leftPush(key, item);
+        log.info("压入栈顶成功: stack={}, item={}", stackName, item);
+    }
+
+    public String popFromStack(String stackName) {
+        String key = "stack:" + stackName;
+        String item = stringRedisTemplate.opsForList().leftPop(key);
+        log.info("从栈顶弹出数据: stack={}, item={}", stackName, item);
+        return item;
     }
 }
