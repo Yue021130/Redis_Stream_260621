@@ -2,6 +2,8 @@
 
 > 一个**完整、可运行、带详细中文注释**的 Redis Stream 消息队列学习项目。
 > 通过模拟“电商订单 -> 扣库存 + 发短信”的真实业务场景，覆盖 Redis Stream 的核心知识点。
+> 
+> **🆕 最新更新**：为了打造更全面的 Redis 实战学习库，项目中现已额外补充了 Redis **五大经典数据结构（String, Hash, List, Set, ZSet）**在真实业务场景下的完整实战代码。详见下文对应章节及 `docs/` 目录。
 
 ## 目录
 
@@ -12,6 +14,7 @@
 - [核心知识点索引](#核心知识点索引)
 - [业务场景说明](#业务场景说明)
 - [REST API 列表](#rest-api-列表)
+- [五大数据结构经典应用场景](#五大数据结构经典应用场景)
 - [手动测试示例](#手动测试示例)
 - [观察重试与死信队列](#观察重试与死信队列)
 - [常见问题](#常见问题)
@@ -188,6 +191,22 @@ XACK                   XACK
 | GET  | `/api/order/recent` | 获取最近生产的 50 条 Stream 消息 |
 | GET  | `/api/order/config` | 获取当前系统配置参数（是否开启模拟、故障率、最大重试） |
 | POST | `/api/order/config` | 动态更新系统配置参数（是否开启模拟、故障率、最大重试） |
+
+## 五大数据结构经典应用场景
+
+除了核心的 Stream 消息队列，本项目在 `com.example.redisstream.service` 和 `controller` 包中，额外为你准备了 Redis 五大基础数据结构的经典业务场景代码演示：
+
+| 数据结构 | 特性/场景 | 核心实战功能演示 | 对应说明文档 |
+|----------|-----------|------------------|----------|
+| **String** (字符串) | 基础 KV，原子计数 | 1. **缓存 (Cache)**<br>2. **计数器 (文章阅读量)**<br>3. **Session 集中管理**<br>4. **API 限流 (Rate Limiting)** | [`redis_string_use_cases_update.md`](docs/redis_string_use_cases_update.md) |
+| **Hash** (哈希) | 对象属性高效管理 | 1. **对象结构化缓存** (局部更新如积分)<br>2. **购物车** (数量增减、移除) | [`redis_hash_use_cases_update.md`](docs/redis_hash_use_cases_update.md) |
+| **List** (列表) | 双向链表，队列/栈 | 1. **简单消息队列** (FIFO)<br>2. **最新列表/时间线** (定长截断)<br>3. **可靠消息队列** (RPOPLPUSH防丢)<br>4. **栈** (LIFO撤销操作) | [`redis_list_use_cases_update.md`](docs/redis_list_use_cases_update.md) |
+| **Set** (无序集合) | 唯一性，集合运算 | 1. **独立访客 UV 统计**<br>2. **公平抽奖系统**<br>3. **社交网络** (共同关注、交集计算) | [`redis_set_use_cases_update.md`](docs/redis_set_use_cases_update.md) |
+| **ZSet** (有序集合) | 绑定分数自动排序 | 1. **排行榜 (Leaderboard)**<br>2. **精准延时队列** (基于时间戳 Score 轮询) | [`redis_zset_use_cases_update.md`](docs/redis_zset_use_cases_update.md) |
+| **Bitmap** (位图) | 按位操作极省内存 | 1. **海量用户签到** (SETBIT/BITCOUNT) | [`redis_advanced_use_cases_update.md`](docs/redis_advanced_use_cases_update.md) |
+| **HyperLogLog** | 极低内存概率统计 | 1. **亿级 UV 去重统计** (PFADD/PFCOUNT 固定占用 12KB) | [`redis_advanced_use_cases_update.md`](docs/redis_advanced_use_cases_update.md) |
+
+*(提示：以上所有的实战场景均已暴露出完整的 REST API 测试接口，你可以直接启动项目后使用 Postman 进行测试和体验。)*
 
 ## 手动测试示例
 
