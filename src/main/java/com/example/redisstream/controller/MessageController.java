@@ -161,6 +161,15 @@ public class MessageController {
     }
 
     /**
+     * 清空供前端展示的实时事件日志。
+     */
+    @PostMapping("/logs/clear")
+    public ApiResponse<String> clearLogs() {
+        stringRedisTemplate.delete("order:ui:logs");
+        return ApiResponse.success("日志已清空");
+    }
+
+    /**
      * 获取最近生产的 Stream 消息（XREVRANGE）。
      */
     @GetMapping("/recent")

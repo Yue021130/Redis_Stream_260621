@@ -2,6 +2,7 @@ package com.example.redisstream.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -56,7 +57,7 @@ public class RedisAdvancedUseCasesService {
      */
     public long countSign(String userId, LocalDate date) {
         String key = buildSignKey(userId, date);
-        Long count = stringRedisTemplate.execute((org.springframework.data.redis.connection.RedisCallback<Long>) connection -> 
+        Long count = stringRedisTemplate.execute((RedisCallback<Long>) connection -> 
             connection.bitCount(key.getBytes())
         );
         log.info("统计用户当月签到次数: userId={}, month={}, count={}", userId, date.format(DateTimeFormatter.ofPattern("yyyyMM")), count);
