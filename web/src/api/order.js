@@ -35,3 +35,6 @@ export const getConfig = () => request.get('/api/order/config')
 
 // 更新系统配置
 export const updateConfig = (config) => request.post('/api/order/config', config)
+
+// 清空 UI 事件日志
+export const clearLogs = () => request.post('/api/order/logs/clear')

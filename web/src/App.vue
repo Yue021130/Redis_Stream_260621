@@ -36,15 +36,21 @@
 
     <!-- 主体内容 -->
     <main class="app-main">
-      <!-- 第一行：数字统计指标 (移至顶部) -->
-      <StatsCards :stats="stats" />
+      <!-- 第一行：数字统计指标 -->
+      <StatsCards
+        :stats="stats"
+        :group-list="groupList"
+        :group-name="groupName"
+        :stream-key="streamKey"
+        :dlq-key="dlqKey"
+      />
 
       <!-- 第二行：核心两栏布局 -->
       <el-row :gutter="20" class="dashboard-grid">
         <!-- 左侧栏：操作控制台与日志 -->
         <el-col :xs="24" :lg="8" class="grid-col left-col">
           <!-- 消息发布台 -->
-          <SendPanel @sent="handleSent" class="dashboard-block" />
+          <SendPanel @sent="handleSent" :stream-key="streamKey" class="dashboard-block" />
 
           <!-- 异常故障模拟控制器 -->
           <div class="tech-card simulation-panel dashboard-block">
@@ -93,21 +99,44 @@
                   style="width: 100px"
                 />
               </div>
-              
               <div class="sim-footer-tip">
                 * 开启后，消费实例会模拟异常不发送 ACK，消息留置 Pending 队列，触发 <code>XCLAIM</code> 进行认领重试，超限后转入 DLQ 死信队列。
+              </div>
+
+              <!-- 运行参数只读展示 -->
+              <div class="runtime-params">
+                <div class="runtime-title">
+                  <el-icon><InfoFilled /></el-icon>
+                  <span>后端运行参数</span>
+                </div>
+                <div class="runtime-row">
+                  <span class="runtime-label">Pending 巡检间隔</span>
+                  <span class="runtime-value">{{ config.pendingIntervalMs ?? '-' }} ms</span>
+                </div>
+                <div class="runtime-row">
+                  <span class="runtime-label">XCLAIM 最小空闲时间</span>
+                  <span class="runtime-value">{{ config.claimIdleMs ?? '-' }} ms</span>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- 系统事件日志 -->
-          <EventLog :logs="eventLogs" @clear="clearLogs" class="dashboard-block log-block" />
+          <EventLog :logs="eventLogs" @clear="clearEventLogs" class="dashboard-block log-block" />
         </el-col>
 
         <!-- 右侧栏：拓扑链路与数据监控 -->
         <el-col :xs="24" :lg="16" class="grid-col right-col">
           <!-- 消息流转拓扑 -->
-          <FlowVisualization ref="flowRef" :stats="stats" class="dashboard-block" />
+          <FlowVisualization
+            ref="flowRef"
+            :stats="stats"
+            :group-list="groupList"
+            :group-name="groupName"
+            :stream-key="streamKey"
+            :dlq-key="dlqKey"
+            class="dashboard-block"
+          />
 
           <!-- 统一数据监控中心 (Tabs 模式) -->
           <div class="tech-card data-hub-card dashboard-block">
@@ -124,10 +153,11 @@
                   </div>
                 </template>
                 <StreamEntries 
-                  :recentMessages="recentMessages" 
-                  :pendingList="pendingList"
-                  :dlqList="dlqList"
-                  :loading="loading" 
+                  :recent-messages="recentMessages" 
+                  :pending-list="pendingList"
+                  :dlq-list="dlqList"
+                  :loading="loading"
+                  :stream-key="streamKey"
                 />
               </el-tab-pane>
 
@@ -144,8 +174,11 @@
                 </template>
                 <PendingTable
                   v-model:currentGroup="currentGroup"
-                  :pendingList="pendingList"
+                  :pending-list="pendingList"
                   :loading="loading"
+                  :group-list="groupList"
+                  :group-name="groupName"
+                  :format-idle-time="formatIdleTime"
                   @groupChange="switchGroup"
                 />
               </el-tab-pane>
@@ -161,7 +194,7 @@
                     </span>
                   </div>
                 </template>
-                <DlqTable :dlqList="dlqList" :loading="loading" />
+                <DlqTable :dlq-list="dlqList" :loading="loading" />
               </el-tab-pane>
             </el-tabs>
           </div>
@@ -179,7 +212,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Connection, Refresh, RefreshRight, Cpu, DataLine, Timer, Warning } from '@element-plus/icons-vue'
+import { Connection, Refresh, RefreshRight, Cpu, DataLine, Timer, Warning, InfoFilled } from '@element-plus/icons-vue'
 import { useStreamDashboard } from './composables/useStreamDashboard.js'
 
 import SendPanel from './components/SendPanel.vue'
@@ -200,30 +233,32 @@ const {
   loading,
   isConnected,
   currentGroup,
+  groupList,
+  groupName,
+  formatIdleTime,
+  streamKey,
+  dlqKey,
   switchGroup,
   refresh,
-  updateConfigParams
+  updateConfigParams,
+  clearEventLogs
 } = useStreamDashboard()
 
 const flowRef = ref(null)
 const activeTab = ref('stream')
 
-// 合计 pending 数量
+// 合计 pending 数量：对所有消费组求和
 const pendingCountSum = computed(() => {
-  const inv = stats.value?.pendingCounts?.['order:group:inventory'] || 0
-  const sms = stats.value?.pendingCounts?.['order:group:sms'] || 0
-  const total = (inv > 0 ? inv : 0) + (sms > 0 ? sms : 0)
-  return total
+  if (!stats.value?.pendingCounts) return 0
+  return Object.values(stats.value.pendingCounts).reduce((sum, count) => {
+    const n = Number(count)
+    return sum + (n > 0 ? n : 0)
+  }, 0)
 })
 
 // 发送消息后触发 Producer 脉冲闪烁
 function handleSent() {
   flowRef.value?.triggerProducerPulse()
-}
-
-// 清空日志
-function clearLogs() {
-  eventLogs.value = []
 }
 
 // 模拟配置变更
@@ -427,6 +462,45 @@ async function handleConfigChange() {
   padding: 10px;
   border-radius: 8px;
   margin-top: 4px;
+}
+
+/* 运行参数只读展示 */
+.runtime-params {
+  margin-top: 8px;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.runtime-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.runtime-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.runtime-label {
+  color: var(--text-secondary);
+}
+
+.runtime-value {
+  color: var(--accent-primary);
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-weight: 600;
 }
 
 /* 统一数据监控中心 */

@@ -9,7 +9,8 @@ import { ElMessage } from 'element-plus'
  * - 直接返回 response.data.data，调用方无需再拆包
  */
 const request = axios.create({
-  baseURL: 'http://localhost:8080',
+  // 使用相对路径，开发时由 Vite 代理转发到后端；生产环境可配置为真实域名
+  baseURL: '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
