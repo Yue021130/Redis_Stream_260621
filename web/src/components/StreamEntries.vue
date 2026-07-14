@@ -2,7 +2,7 @@
   <div class="stream-entries-container">
     <div class="table-action-header">
       <div class="sub-title-area">
-        <span class="desc-text">这里展示了 <code>order:stream</code> 消息队列中的原始消息日志，可通过 XREVRANGE 获取最新的 50 条。</span>
+        <span class="desc-text">这里展示了 <code>{{ streamKey }}</code> 消息队列中的原始消息日志，可通过 XREVRANGE 获取最新的 50 条。</span>
       </div>
       <el-tag v-if="recentMessages.length > 0" type="primary" effect="dark" size="small" class="total-tag">
         最近 {{ recentMessages.length }} 条
@@ -86,6 +86,10 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  streamKey: {
+    type: String,
+    default: 'order:stream'
   }
 })
 

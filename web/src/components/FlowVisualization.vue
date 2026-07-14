@@ -40,7 +40,7 @@
             </div>
             <div class="node-info">
               <div class="node-title">Redis Stream</div>
-              <div class="node-desc font-mono">{{ stats?.streamKey || 'order:stream' }}</div>
+              <div class="node-desc font-mono">{{ streamKey }}</div>
             </div>
             <div class="node-counter" :class="{ 'number-flash': streamPulse }">
               <span class="counter-val">{{ stats?.length ?? 0 }}</span>
@@ -51,64 +51,42 @@
 
         <!-- 连线 2: Stream -> Consumers (分轨分发) -->
         <div class="flow-connector-branch">
-          <div class="branch-line upper" :class="{ 'pulse-speed': inventoryPulse }">
+          <div class="branch-line upper" :class="{ 'pulse-speed': groupPulse[groupList[0]] }">
             <span class="branch-badge">XREADGROUP</span>
           </div>
-          <div class="branch-line lower" :class="{ 'pulse-speed': smsPulse }">
+          <div class="branch-line lower" :class="{ 'pulse-speed': groupPulse[groupList[groupList.length - 1]] }">
             <span class="branch-badge">XREADGROUP</span>
           </div>
         </div>
 
-        <!-- 3. 消费者组 (垂直双通道) -->
+        <!-- 3. 消费者组 (垂直堆叠，动态渲染) -->
         <div class="consumer-stack">
-          <!-- 库存组 -->
-          <div class="node-card group inventory" :class="{ 'pulse-active': inventoryPulse }">
+          <div
+            v-for="(group, index) in groupList"
+            :key="group"
+            class="node-card group"
+            :class="[groupClass(index), { 'pulse-active': groupPulse[group] }]"
+          >
             <div class="node-glow"></div>
             <div class="group-header">
               <div class="node-icon">
                 <el-icon><Box /></el-icon>
               </div>
               <div class="group-title-area">
-                <div class="node-title">库存扣减组</div>
-                <div class="node-desc font-mono">order:group:inventory</div>
+                <div class="node-title">{{ groupName(group) }}</div>
+                <div class="node-desc font-mono">{{ group }}</div>
               </div>
             </div>
             <div class="group-stats">
               <div class="stat-item">
                 <span class="stat-lbl">Pending</span>
-                <span class="stat-val mono-number" :class="getPendingClass(stats?.pendingCounts?.['order:group:inventory'])">
-                  {{ stats?.pendingCounts?.['order:group:inventory'] ?? 0 }}
+                <span class="stat-val mono-number" :class="getPendingClass(stats?.pendingCounts?.[group])">
+                  {{ stats?.pendingCounts?.[group] ?? 0 }}
                 </span>
               </div>
               <div class="stat-item">
                 <span class="stat-lbl">在线实例</span>
-                <span class="stat-val mono-number">{{ stats?.consumers?.['order:group:inventory']?.length ?? 0 }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 短信组 -->
-          <div class="node-card group sms" :class="{ 'pulse-active': smsPulse }">
-            <div class="node-glow"></div>
-            <div class="group-header">
-              <div class="node-icon">
-                <el-icon><ChatLineRound /></el-icon>
-              </div>
-              <div class="group-title-area">
-                <div class="node-title">短信通知组</div>
-                <div class="node-desc font-mono">order:group:sms</div>
-              </div>
-            </div>
-            <div class="group-stats">
-              <div class="stat-item">
-                <span class="stat-lbl">Pending</span>
-                <span class="stat-val mono-number" :class="getPendingClass(stats?.pendingCounts?.['order:group:sms'])">
-                  {{ stats?.pendingCounts?.['order:group:sms'] ?? 0 }}
-                </span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-lbl">在线实例</span>
-                <span class="stat-val mono-number">{{ stats?.consumers?.['order:group:sms']?.length ?? 0 }}</span>
+                <span class="stat-val mono-number">{{ stats?.consumers?.[group]?.length ?? 0 }}</span>
               </div>
             </div>
           </div>
@@ -116,8 +94,8 @@
 
         <!-- 连线 3: Consumers -> DLQ (重试失败汇聚) -->
         <div class="flow-connector-merge">
-          <div class="merge-line upper" :class="{ 'pulse-speed': dlqPulse && (stats?.pendingCounts?.['order:group:inventory'] || 0) > 0 }"></div>
-          <div class="merge-line lower" :class="{ 'pulse-speed': dlqPulse && (stats?.pendingCounts?.['order:group:sms'] || 0) > 0 }"></div>
+          <div class="merge-line upper" :class="{ 'pulse-speed': dlqPulse && (stats?.pendingCounts?.[groupList[0]] || 0) > 0 }"></div>
+          <div class="merge-line lower" :class="{ 'pulse-speed': dlqPulse && (stats?.pendingCounts?.[groupList[groupList.length - 1]] || 0) > 0 }"></div>
           <span class="merge-badge danger">重试超限</span>
         </div>
 
@@ -130,7 +108,7 @@
             </div>
             <div class="node-info">
               <div class="node-title">死信队列 (DLQ)</div>
-              <div class="node-desc font-mono">{{ stats?.streamKey || 'order:stream' }}:dlq</div>
+              <div class="node-desc font-mono">{{ dlqKey }}</div>
             </div>
             <div class="node-counter" :class="{ 'number-flash': dlqPulse }">
               <span class="counter-val">{{ stats?.dlqLength ?? 0 }}</span>
@@ -161,13 +139,12 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import {
   Connection,
   Promotion,
   DataLine,
   Box,
-  ChatLineRound,
   Warning
 } from '@element-plus/icons-vue'
 
@@ -175,30 +152,59 @@ const props = defineProps({
   stats: {
     type: Object,
     default: null
+  },
+  groupList: {
+    type: Array,
+    default: () => []
+  },
+  groupName: {
+    type: Function,
+    default: (g) => g
+  },
+  streamKey: {
+    type: String,
+    default: 'order:stream'
+  },
+  dlqKey: {
+    type: String,
+    default: 'order:stream:dlq'
   }
 })
 
 // 脉冲动画触发器
 const producerPulse = ref(false)
 const streamPulse = ref(false)
-const inventoryPulse = ref(false)
-const smsPulse = ref(false)
 const dlqPulse = ref(false)
+// 按 group 维护脉冲状态
+const groupPulse = ref({})
 
-function triggerPulse(refName) {
-  const map = {
-    producer: producerPulse,
-    stream: streamPulse,
-    inventory: inventoryPulse,
-    sms: smsPulse,
-    dlq: dlqPulse
+function groupClass(index) {
+  // 为不同组分配不同强调色，循环使用
+  const classes = ['inventory', 'sms', 'info', 'warning']
+  return classes[index % classes.length]
+}
+
+function triggerPulse(refName, duration = 1000) {
+  if (refName === 'producer') {
+    producerPulse.value = true
+    setTimeout(() => { producerPulse.value = false }, duration)
+    return
   }
-  const r = map[refName]
-  if (!r) return
-  r.value = true
+  if (refName === 'stream') {
+    streamPulse.value = true
+    setTimeout(() => { streamPulse.value = false }, duration)
+    return
+  }
+  if (refName === 'dlq') {
+    dlqPulse.value = true
+    setTimeout(() => { dlqPulse.value = false }, duration)
+    return
+  }
+  // group pulse
+  groupPulse.value[refName] = true
   setTimeout(() => {
-    r.value = false
-  }, 1000)
+    groupPulse.value[refName] = false
+  }, duration)
 }
 
 function getPendingClass(count) {
@@ -216,32 +222,18 @@ watch(
     // Stream 长度变化
     if (!oldStats || newStats.length !== oldStats.length) {
       triggerPulse('stream')
-      
-      const inventoryPending = newStats.pendingCounts?.['order:group:inventory'] || 0
-      const oldInventoryPending = oldStats?.pendingCounts?.['order:group:inventory'] || 0
-      if (inventoryPending <= oldInventoryPending) {
-        triggerPulse('inventory')
-      }
-
-      const smsPending = newStats.pendingCounts?.['order:group:sms'] || 0
-      const oldSmsPending = oldStats?.pendingCounts?.['order:group:sms'] || 0
-      if (smsPending <= oldSmsPending) {
-        triggerPulse('sms')
-      }
-    } else {
-      // 只有在 stream 长度没变的情况下，才单独看 pending 变化
-      const inventoryPending = newStats.pendingCounts?.['order:group:inventory']
-      const oldInventoryPending = oldStats?.pendingCounts?.['order:group:inventory']
-      if (inventoryPending !== oldInventoryPending) {
-        triggerPulse('inventory')
-      }
-
-      const smsPending = newStats.pendingCounts?.['order:group:sms']
-      const oldSmsPending = oldStats?.pendingCounts?.['order:group:sms']
-      if (smsPending !== oldSmsPending) {
-        triggerPulse('sms')
-      }
+      // Stream 变化时，默认给所有组一个消费脉冲
+      props.groupList.forEach(g => triggerPulse(g))
     }
+
+    // 各组 pending 变化
+    props.groupList.forEach(group => {
+      const newPending = newStats.pendingCounts?.[group]
+      const oldPending = oldStats?.pendingCounts?.[group]
+      if (newPending !== oldPending) {
+        triggerPulse(group)
+      }
+    })
 
     // DLQ 变化
     if (!oldStats || newStats.dlqLength !== oldStats.dlqLength) {
@@ -301,6 +293,7 @@ defineExpose({
   display: flex;
   justify-content: center;
   align-items: center;
+  min-height: 220px;
 }
 
 .flow-layout {
@@ -308,7 +301,7 @@ defineExpose({
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 960px;
+  max-width: 1100px;
 }
 
 /* 节点通用卡片 */
@@ -353,7 +346,8 @@ defineExpose({
   z-index: 1;
 }
 
-.node-wrapper.pulse-active .node-glow {
+.node-wrapper.pulse-active .node-glow,
+.node-card.group.pulse-active .node-glow {
   opacity: 1;
   animation: card-pulse 1s ease-out;
 }
@@ -449,12 +443,15 @@ defineExpose({
   color: var(--text-secondary);
 }
 
-/* 消费者双通道卡片 */
+/* 消费者堆叠卡片 */
 .consumer-stack {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   z-index: 2;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .node-card.group {
@@ -483,6 +480,12 @@ defineExpose({
 }
 .sms .node-icon {
   background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+.info .node-icon {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+.warning .node-icon {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
 }
 
 .group-title-area {

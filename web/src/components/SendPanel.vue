@@ -97,7 +97,7 @@
         <div class="tab-content batch-content">
           <div class="batch-card-info">
             <p><strong>批量发布说明：</strong></p>
-            <p>系统将以当前表单或随机数据为基准模板，并自动递增生成唯一的 <code>orderId</code>，在后台快速并发投递到 <code>order:stream</code> 消息队列中。</p>
+            <p>系统将以当前表单或随机数据为基准模板，并自动递增生成唯一的 <code>orderId</code>，在后台快速并发投递到 <code>{{ streamKey }}</code> 消息队列中。</p>
           </div>
           
           <el-form label-position="top" class="send-form">
@@ -113,7 +113,7 @@
             <div class="batch-stats">
               <div class="batch-stat-item">
                 <span class="lbl">目标 Stream</span>
-                <span class="val font-mono">order:stream</span>
+                <span class="val font-mono">{{ streamKey }}</span>
               </div>
               <div class="batch-stat-item">
                 <span class="lbl">预期消息体积</span>
@@ -145,6 +145,13 @@ import {
   MagicStick
 } from '@element-plus/icons-vue'
 import { sendOrder, sendBatch, sendDemo } from '../api/order.js'
+
+const props = defineProps({
+  streamKey: {
+    type: String,
+    default: 'order:stream'
+  }
+})
 
 const emit = defineEmits(['sent'])
 

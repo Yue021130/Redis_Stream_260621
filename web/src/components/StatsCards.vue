@@ -13,54 +13,42 @@
               <span class="stat-value mono-number">{{ stats?.length ?? 0 }}</span>
               <span class="stat-unit">条</span>
             </div>
+            <div class="stat-sub font-mono">{{ streamKey }}</div>
           </div>
         </div>
       </el-col>
 
-      <!-- 2. Inventory Pending -->
-      <el-col :xs="24" :sm="12" :md="8" :lg="5">
+      <!-- 2. 各消费组 Pending（动态） -->
+      <el-col
+        v-for="group in groupList"
+        :key="group"
+        :xs="24"
+        :sm="12"
+        :md="8"
+        :lg="5"
+      >
         <div class="stat-card tech-card">
           <div class="stat-icon-wrapper warning">
             <el-icon><Box /></el-icon>
           </div>
           <div class="stat-content">
-            <div class="stat-label">库存消费组 Pending</div>
+            <div class="stat-label">{{ groupName(group) }} Pending</div>
             <div class="stat-value-row">
               <span
                 class="stat-value mono-number"
-                :class="getPendingClass(stats?.pendingCounts?.['order:group:inventory'])"
+                :class="getPendingClass(stats?.pendingCounts?.[group])"
               >
-                {{ stats?.pendingCounts?.['order:group:inventory'] ?? 0 }}
+                {{ stats?.pendingCounts?.[group] ?? 0 }}
               </span>
               <span class="stat-unit">条</span>
             </div>
+            <div class="stat-sub font-mono">{{ group }}</div>
           </div>
         </div>
       </el-col>
 
-      <!-- 3. SMS Pending -->
-      <el-col :xs="24" :sm="12" :md="8" :lg="5">
-        <div class="stat-card tech-card">
-          <div class="stat-icon-wrapper info">
-            <el-icon><ChatLineRound /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-label">短信消费组 Pending</div>
-            <div class="stat-value-row">
-              <span
-                class="stat-value mono-number"
-                :class="getPendingClass(stats?.pendingCounts?.['order:group:sms'])"
-              >
-                {{ stats?.pendingCounts?.['order:group:sms'] ?? 0 }}
-              </span>
-              <span class="stat-unit">条</span>
-            </div>
-          </div>
-        </div>
-      </el-col>
-
-      <!-- 4. DLQ 长度 -->
-      <el-col :xs="24" :sm="12" :md="8" :lg="5">
+      <!-- 3. DLQ 长度 -->
+      <el-col :xs="24" :sm="12" :md="8" :lg="4">
         <div class="stat-card tech-card" :class="{ 'has-danger-glow': (stats?.dlqLength || 0) > 0 }">
           <div class="stat-icon-wrapper danger" :class="{ 'pulse-danger-icon': (stats?.dlqLength || 0) > 0 }">
             <el-icon><Warning /></el-icon>
@@ -76,11 +64,12 @@
               </span>
               <span class="stat-unit">条</span>
             </div>
+            <div class="stat-sub font-mono">{{ dlqKey }}</div>
           </div>
         </div>
       </el-col>
 
-      <!-- 5. 消费者数 -->
+      <!-- 4. 消费者数 -->
       <el-col :xs="24" :sm="12" :md="8" :lg="4">
         <div class="stat-card tech-card">
           <div class="stat-icon-wrapper success">
@@ -92,6 +81,7 @@
               <span class="stat-value mono-number success-val">{{ totalConsumers }}</span>
               <span class="stat-unit">个</span>
             </div>
+            <div class="stat-sub">共 {{ groupList.length }} 个消费组</div>
           </div>
         </div>
       </el-col>
@@ -104,7 +94,6 @@ import { computed } from 'vue'
 import {
   DataLine,
   Box,
-  ChatLineRound,
   Warning,
   User
 } from '@element-plus/icons-vue'
@@ -113,6 +102,22 @@ const props = defineProps({
   stats: {
     type: Object,
     default: null
+  },
+  groupList: {
+    type: Array,
+    default: () => []
+  },
+  groupName: {
+    type: Function,
+    default: (g) => g
+  },
+  streamKey: {
+    type: String,
+    default: 'order:stream'
+  },
+  dlqKey: {
+    type: String,
+    default: 'order:stream:dlq'
   }
 })
 
@@ -179,11 +184,6 @@ const totalConsumers = computed(() => {
   filter: drop-shadow(0 4px 6px rgba(245, 158, 11, 0.3));
 }
 
-.stat-icon-wrapper.info {
-  background: linear-gradient(135deg, #06b6d4, #0891b2);
-  filter: drop-shadow(0 4px 6px rgba(6, 182, 212, 0.3));
-}
-
 .stat-icon-wrapper.danger {
   background: linear-gradient(135deg, #ef4444, #dc2626);
   filter: drop-shadow(0 4px 6px rgba(239, 68, 68, 0.3));
@@ -225,6 +225,16 @@ const totalConsumers = computed(() => {
 .stat-unit {
   font-size: 11px;
   color: var(--text-secondary);
+}
+
+.stat-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 状态颜色值 */
