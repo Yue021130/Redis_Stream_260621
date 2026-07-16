@@ -4,9 +4,14 @@
       <div class="sub-title-area">
         <span class="desc-text">展示选定消费者组中已被分配但尚未收到 ACK 确认的消息。这些消息可能正在处理或已被挂起。</span>
       </div>
-      <el-radio-group v-model="currentGroup" size="small" @change="handleGroupChange">
-        <el-radio-button label="order:group:inventory">库存消费组</el-radio-button>
-        <el-radio-button label="order:group:sms">短信消费组</el-radio-button>
+      <el-radio-group v-if="groupList.length" v-model="currentGroup" size="small" @change="handleGroupChange">
+        <el-radio-button
+          v-for="group in groupList"
+          :key="group"
+          :label="group"
+        >
+          {{ groupName(group) }}
+        </el-radio-button>
       </el-radio-group>
     </div>
 
@@ -52,19 +57,24 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  groupList: {
+    type: Array,
+    default: () => []
+  },
+  groupName: {
+    type: Function,
+    default: (g) => g
+  },
+  formatIdleTime: {
+    type: Function,
+    default: (ms) => `${ms}ms`
   }
 })
 
 const emit = defineEmits(['update:currentGroup', 'groupChange'])
 
-const currentGroup = defineModel('currentGroup', { default: 'order:group:inventory' })
-
-function formatIdleTime(ms) {
-  if (!ms) return '-'
-  if (ms < 1000) return `${ms}ms`
-  if (ms < 60000) return `${Math.floor(ms / 1000)}秒`
-  return `${Math.floor(ms / 60000)}分 ${Math.floor((ms % 60000) / 1000)}秒`
-}
+const currentGroup = defineModel('currentGroup', { default: '' })
 
 function handleGroupChange(group) {
   emit('groupChange', group)
