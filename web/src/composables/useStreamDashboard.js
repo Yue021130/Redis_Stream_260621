@@ -1,11 +1,20 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { getStats, getPending, getDlq, getLogs, getRecentMessages, getConfig, updateConfig } from '../api/order.js'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { getStats, getPending, getDlq, getLogs, getRecentMessages, getConfig, updateConfig, clearLogs } from '../api/order.js'
 
 /**
  * 轮询间隔（毫秒）。
  * 3 秒一次，既能实时观察队列变化，又不会对后端造成太大压力。
  */
 const POLL_INTERVAL = 3000
+
+/**
+ * 组名到中文展示名的映射。
+ * 未知组名直接显示原始名称，保持对后端配置的兼容性。
+ */
+const GROUP_NAME_MAP = {
+  'order:group:inventory': '库存消费组',
+  'order:group:sms': '短信消费组'
+}
 
 /**
  * 核心组合式函数：管理整个仪表盘的数据、轮询和事件日志。
@@ -19,15 +28,38 @@ export function useStreamDashboard() {
   const dlqList = ref([])
   const eventLogs = ref([])
   const recentMessages = ref([])
-  const config = ref({ simulateFailure: false, failureRate: 0.3, maxRetries: 3 })
+  const config = ref({ simulateFailure: false, failureRate: 0.3, maxRetries: 3, pendingIntervalMs: 10000, claimIdleMs: 30000 })
 
   // UI 状态
   const loading = ref(false)
   const error = ref(null)
-  const currentGroup = ref('order:group:inventory')
+  const currentGroup = ref('')
 
   // 连接状态：只要 stats 有值就认为已连接
   const isConnected = computed(() => stats.value !== null)
+
+  // 从后端 stats 动态推导消费者组列表
+  const groupList = computed(() => {
+    if (!stats.value) return []
+    // consumers / pendingCounts 的 key 即为 group 名称
+    const fromConsumers = Object.keys(stats.value.consumers || {})
+    const fromPending = Object.keys(stats.value.pendingCounts || {})
+    const set = new Set([...fromConsumers, ...fromPending])
+    return Array.from(set)
+  })
+
+  // 当前选中的消费组没有数据时，自动切换到第一个可用组
+  watch(groupList, (list) => {
+    if (list.length > 0 && !list.includes(currentGroup.value)) {
+      currentGroup.value = list[0]
+    }
+  }, { immediate: true })
+
+  // 当前 Stream key（由后端 stats 返回，默认回退用于初始展示）
+  const streamKey = computed(() => stats.value?.streamKey || 'order:stream')
+
+  // 死信队列 key
+  const dlqKey = computed(() => `${streamKey.value}:dlq`)
 
   let timer = null
 
@@ -41,29 +73,10 @@ export function useStreamDashboard() {
   }
 
   /**
-   * 添加一条事件日志（本地生成的日志，如手动刷新等，也可继续保留此方法备用）
-   */
-  function addLog(type, message) {
-    const now = new Date()
-    const time = now.toLocaleTimeString('zh-CN', { hour12: false })
-    // 注意：如果主要靠后端日志，这里本地添加的可能会被后端的覆盖
-    // 这里为了兼容性暂时保留
-  }
-
-  /**
-   * 检测统计数据变化（废弃，改为从后端获取日志）
-   */
-  function detectChanges(oldStats, newStats) {
-    // 逻辑已移至后端
-  }
-
-  /**
    * 把组名转换为可读中文。
    */
   function groupName(group) {
-    if (group === 'order:group:inventory') return '库存扣减组'
-    if (group === 'order:group:sms') return '短信通知组'
-    return group
+    return GROUP_NAME_MAP[group] || group
   }
 
   /**
@@ -72,15 +85,26 @@ export function useStreamDashboard() {
   async function fetchAll() {
     loading.value = true
     try {
-      const [statsData, pendingData, dlqData, logsData, recentData] = await Promise.all([
-        getStats(),
+      // 先获取 stats，以便动态确定消费组、Stream key
+      const statsData = await getStats()
+      stats.value = statsData
+
+      // 动态确定当前消费组
+      const availableGroups = [
+        ...Object.keys(statsData?.consumers || {}),
+        ...Object.keys(statsData?.pendingCounts || {})
+      ]
+      if (availableGroups.length > 0 && !availableGroups.includes(currentGroup.value)) {
+        currentGroup.value = availableGroups[0]
+      }
+
+      const [pendingData, dlqData, logsData, recentData] = await Promise.all([
         getPending(currentGroup.value),
         getDlq(),
         getLogs(),
         getRecentMessages()
       ])
 
-      stats.value = statsData
       pendingList.value = pendingData || []
       dlqList.value = dlqData || []
       eventLogs.value = logsData || []
@@ -101,7 +125,10 @@ export function useStreamDashboard() {
     try {
       const data = await getConfig()
       if (data) {
-        config.value = data
+        config.value = {
+          ...config.value,
+          ...data
+        }
       }
     } catch (err) {
       console.error('获取配置失败:', err)
@@ -117,6 +144,21 @@ export function useStreamDashboard() {
       await fetchConfig()
     } catch (err) {
       console.error('更新配置失败:', err)
+      throw err
+    }
+  }
+
+  /**
+   * 清空后端事件日志并立即刷新。
+   */
+  async function clearEventLogs() {
+    try {
+      await clearLogs()
+      eventLogs.value = []
+      await fetchAll()
+    } catch (err) {
+      console.error('清空日志失败:', err)
+      throw err
     }
   }
 
@@ -152,6 +194,7 @@ export function useStreamDashboard() {
    */
   function refresh() {
     fetchAll()
+    fetchConfig()
   }
 
   onMounted(startPolling)
@@ -168,13 +211,16 @@ export function useStreamDashboard() {
     error,
     isConnected,
     currentGroup,
+    groupList,
+    streamKey,
+    dlqKey,
     groupName,
     formatIdleTime,
     switchGroup,
     refresh,
     fetchAll,
-    addLog,
     fetchConfig,
-    updateConfigParams
+    updateConfigParams,
+    clearEventLogs
   }
 }
