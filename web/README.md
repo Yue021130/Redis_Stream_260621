@@ -21,6 +21,7 @@
 
 3. **Stream 全局数据看板 (`StatsCards.vue`)**
    - 实时监控 Stream 总长度、各消费组的 Pending 积压数、死信队列 (DLQ) 堆积数。
+   - **消费组动态渲染**：根据后端 `/api/order/stats` 返回的 `consumers` / `pendingCounts` 自动展示所有消费组，无需前端硬编码。
 
 4. **实时消息流查看 (`StreamEntries.vue`)**
    - 展示最近进入 Stream 的 50 条消息列表。
@@ -29,18 +30,20 @@
 
 5. **Pending 队列与消费组管理 (`PendingTable.vue`)**
    - 展示因业务异常/处理超时未 ACK 的消息。
-   - 支持多消费者组切换（如“库存组”、“短信组”），独立查看各组的积压状态。
+   - 支持多消费者组切换，组列表由后端配置动态驱动。
 
 6. **DLQ 死信队列查看 (`DlqTable.vue`)**
    - 展示超过最大重试次数（Max Retries）后被遗弃的消息，辅助业务排查严重故障。
 
 7. **系统事件日志 (`EventLog.vue`)**
    - 实时拉取后端产生的业务动作日志（成功扣减、模拟失败报错、XCLAIM 抢占、移入死信队列等）。
+   - 支持一键清空，调用后端 `POST /api/order/logs/clear` 真正清除 Redis 中的日志数据。
 
 8. **异常消费与死信模拟器 (`App.vue`)**
    - 支持动态开启/关闭模拟消费失败。
    - 支持调节故障发生率 (0.1 ~ 1.0) 和进入死信前最大重试次数 (1 ~ 5)。
-   - 无缝调用后端 `/api/order/config` 进行参数同步，允许在运行期热更新故障模拟配置，极大方便了教学和调试。
+   - 无缝调用后端 `/api/order/config` 进行参数同步，允许在运行期热更新故障模拟配置。
+   - 同时展示后端只读运行参数：`pendingIntervalMs`（Pending 巡检间隔）和 `claimIdleMs`（XCLAIM 最小空闲时间）。
 
 ## 📂 目录结构
 
@@ -49,7 +52,8 @@ web/
 ├── public/                 # 静态资源
 ├── src/
 │   ├── api/
-│   │   └── order.js        # Axios API 封装，与后端进行通信
+│   │   ├── order.js        # Axios API 封装，与后端进行通信
+│   │   └── request.js      # Axios 实例（使用相对路径 /api，开发时由 Vite 代理转发）
 │   ├── assets/             # 全局样式与图片
 │   ├── components/         # 核心 Vue 组件库 (按模块拆分)
 │   ├── composables/
@@ -77,13 +81,16 @@ const intervalId = setInterval(fetchAll, 3000);
 - 如果一条消息 ID 出现在 `pendingList` 中 $\rightarrow$ `处理中/失败待重试`
 - 如果均未出现且已经进入过 Stream $\rightarrow$ `已消费 (ACK)`
 
+Stream key / DLQ key 均从后端 `/api/order/stats` 返回的 `streamKey` 动态获取，前端不再写死 `order:stream`。
+
 ### 3. 主题与样式覆盖 (`style.css`)
 为了实现沉浸式的科技风体验，前端重写了 Element Plus 默认的亮色样式：
 - 全局注入了深色渐变背景。
 - 覆盖了 `.el-table` 的斑马纹 (`stripe`) 样式、悬浮样式 (`hover`) 以及展开行背景，防止文字在浅色背景下不可见。
 
-### 4. 动态故障配置同步
-通过整合后端新增的 `/api/order/config` (GET/POST) 接口，前端可以对运行中的 Java 服务的故障模拟行为进行实时配置调优。无须修改配置文件并重启后端，便可热插拔地开启异常模拟、改变丢包重试规则，并在界面上实时看到重试、死信流转的效果。
+### 4. 动态配置与消费组同步
+- **消费组动态化**：`useStreamDashboard.js` 从 `/api/order/stats` 返回的 `consumers` / `pendingCounts` 中推导 `groupList`，所有展示消费组的地方（StatsCards、PendingTable、FlowVisualization）均使用 `v-for` 动态渲染。修改后端 `app.stream.groups` 配置后，前端无需改动即可自动适配。
+- **故障配置热更新**：通过整合后端 `/api/order/config` (GET/POST) 接口，前端可以对运行中的 Java 服务的故障模拟行为进行实时配置调优。无须修改配置文件并重启后端，便可热插拔地开启异常模拟、改变丢包重试规则，并在界面上实时看到重试、死信流转的效果。
 
 ## 📦 启动指引
 
@@ -102,3 +109,5 @@ const intervalId = setInterval(fetchAll, 3000);
    ```bash
    npm run build
    ```
+   
+   生产环境部署时，请将 `web/src/api/request.js` 中的 `baseURL` 替换为真实后端域名，或在构建时通过环境变量注入。

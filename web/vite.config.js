@@ -15,6 +15,13 @@ export default defineConfig({
     // 开发服务器端口
     port: 5173,
     // 允许局域网内其他设备访问
-    host: true
+    host: true,
+    // 开发代理：将 /api 请求转发到后端 Spring Boot 服务
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      }
+    }
   }
 })
