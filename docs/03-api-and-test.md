@@ -165,7 +165,23 @@ curl http://localhost:8080/api/order/logs
 }
 ```
 
-### 1.8 获取最近生产的 Stream 消息 (XREVRANGE)
+### 1.8 清空实时事件日志
+
+```bash
+curl -X POST http://localhost:8080/api/order/logs/clear
+```
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "日志已清空",
+  "data": null
+}
+```
+
+### 1.9 获取最近生产的 Stream 消息 (XREVRANGE)
 
 ```bash
 curl http://localhost:8080/api/order/recent
@@ -190,7 +206,7 @@ curl http://localhost:8080/api/order/recent
 }
 ```
 
-### 1.9 获取当前系统配置参数
+### 1.10 获取当前系统配置参数
 
 ```bash
 curl http://localhost:8080/api/order/config
@@ -212,7 +228,7 @@ curl http://localhost:8080/api/order/config
 }
 ```
 
-### 1.10 更新系统配置参数
+### 1.11 更新系统配置参数
 
 ```bash
 POST /api/order/config

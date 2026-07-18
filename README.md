@@ -188,9 +188,10 @@ XACK                   XACK
 | GET  | `/api/order/dlq` | 查看死信队列最近 50 条消息 |
 | GET  | `/api/order/stats` | 查看 stream 统计信息 |
 | GET  | `/api/order/logs` | 获取供前端展示的实时事件日志 |
+| POST | `/api/order/logs/clear` | 清空前端实时事件日志 |
 | GET  | `/api/order/recent` | 获取最近生产的 50 条 Stream 消息 |
-| GET  | `/api/order/config` | 获取当前系统配置参数（是否开启模拟、故障率、最大重试） |
-| POST | `/api/order/config` | 动态更新系统配置参数（是否开启模拟、故障率、最大重试） |
+| GET  | `/api/order/config` | 获取当前系统配置参数（模拟、故障率、重试、巡检间隔、Claim 空闲时间） |
+| POST | `/api/order/config` | 动态更新系统配置参数（模拟、故障率、最大重试） |
 
 ## 五大数据结构经典应用场景
 
